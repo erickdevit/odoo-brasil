@@ -5,11 +5,15 @@ services:
       dockerfile: docker/Dockerfile
     image: odoo-custom:16
     ports:
-      - "8069:8069"
-      - "8072:8072"
+      - "8070:8069"
+      - "8073:8072"
     entrypoint: /entrypoint.sh
     volumes:
-      - ./addons:/mnt/extra-addons # Volume para seus módulos customizados
+      - ./addons:/mnt/extra-addons # Seus módulos customizados
+      - ./l10n-brazil:/mnt/l10n-brazil
+      - ./account-payment:/mnt/account-payment
+      - ./bank-payment:/mnt/bank-payment
+      - ./product-attribute:/mnt/product-attribute
       - odoo-data:/var/lib/odoo
       - ./docker/odoo.conf:/etc/odoo/odoo.conf
     environment:
