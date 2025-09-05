@@ -3,31 +3,8 @@ version: "3.8"
 volumes:
   db_data_prod:
   odoo_data_prod:
-  traefik_data:
 
 services:
-  traefik:
-    image: traefik:v2.9
-    container_name: traefik
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-      # - "8080:8080" # (Opcional) Para acessar o Dashboard do Traefik
-    command:
-      - "--api.insecure=true" # (Opcional) Habilita o Dashboard - NÃO USE EM PRODUÇÃO SEM SENHA
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.myresolver.acme.httpchallenge=true"
-      - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web"
-      - "--certificatesresolvers.myresolver.acme.email=SEU_EMAIL_AQUI@gmail.com" # <-- SUBSTITUA PELO SEU E-MAIL
-      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
-    volumes:
-      - traefik_data:/letsencrypt
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-
   db:
     image: postgres:13
     restart: always
@@ -41,22 +18,10 @@ services:
   odoo:
     image: erickwornex/odoobrasileiro:latest
     restart: always
+    ports:
+      - "8069:8069"
+      - "8072:8072"
+    volumes:
+      - odoo_data_prod:/var/lib/odoo
     depends_on:
       - db
-    environment:
-      # --- Configurações do SMTP (substitua com seus dados) ---
-      - SMTP_SERVER=smtp.seuprovedor.com
-      - SMTP_PORT=587
-      - SMTP_USER=seu_usuario_smtp
-      - SMTP_PASSWORD=sua_senha_smtp
-      - SMTP_SSL=True
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.odoo.rule=Host(`odoo.SEU_DOMINIO_AQUI.com`)" # <-- SUBSTITUA PELO SEU DOMÍNIO
-      - "traefik.http.routers.odoo.entrypoints=web"
-      - "traefik.http.routers.odoo-secure.rule=Host(`odoo.SEU_DOMINIO_AQUI.com`)" # <-- SUBSTITUA PELO SEU DOMÍNIO
-      - "traefik.http.routers.odoo-secure.entrypoints=websecure"
-      - "traefik.http.routers.odoo-secure.tls=true"
-      - "traefik.http.routers.odoo-secure.tls.certresolver=myresolver"
-      - "traefik.http.services.odoo.loadbalancer.server.port=8069"
-

@@ -1,6 +1,6 @@
 # 🚀 Odoo Brasileiro - Docker Setup
 
-Sistema Odoo 16 com localização brasileira completa, configurado com Docker para desenvolvimento e produção, incluindo integração com Traefik para HTTPS e gerenciamento de domínio.
+Sistema Odoo 16 com localização brasileira completa, configurado com Docker para desenvolvimento e produção.
 
 ## ✨ Características
 
@@ -11,8 +11,6 @@ Sistema Odoo 16 com localização brasileira completa, configurado com Docker pa
 -   **NF-e** com parser XML robusto
 -   **Compatibilidade Python 3.9**
 -   **Imagem Docker auto-contida** (`erickwornex/odoobrasileiro:latest`)
--   **Traefik** integrado para **HTTPS automático** (Let's Encrypt) e roteamento de domínio
--   **Configuração SMTP** via variáveis de ambiente
 
 ## 🛠️ Módulos Incluídos
 
@@ -29,14 +27,12 @@ Sistema Odoo 16 com localização brasileira completa, configurado com Docker pa
 -   `account_payment_partner`: Pagamentos por parceiro
 -   Outros módulos padrão do Odoo 16
 
-## 🚀 Implantação em Produção (Recomendado)
+## 🚀 Implantação em Produção
 
-Esta seção detalha como implantar o Odoo usando a imagem Docker pré-construída e o Traefik para gerenciar seu domínio e HTTPS.
+Esta seção detalha como implantar o Odoo usando a imagem Docker pré-construída.
 
 ### Pré-requisitos
 -   Servidor com **Docker** e **Docker Compose** instalados.
--   Um **domínio** (ou subdomínio) apontando para o IP público do seu servidor (ex: `odoo.seusite.com`).
--   Credenciais de um **servidor SMTP** para envio de e-mails.
 
 ### Passos
 
@@ -46,61 +42,20 @@ Esta seção detalha como implantar o Odoo usando a imagem Docker pré-construí
     cd odoo-brasil
     ```
 
-2.  **Configure o `docker-compose.yml`:**
-    Abra o arquivo `docker-compose.yml` e substitua os placeholders:
-    -   **`SEU_EMAIL_AQUI@gmail.com`**: Seu e-mail para notificações do Let's Encrypt.
-    -   **`odoo.SEU_DOMINIO_AQUI.com`**: O domínio completo que você configurou no DNS para acessar o Odoo.
-    -   **Variáveis `SMTP_*`**: Preencha com os dados do seu provedor SMTP (servidor, porta, usuário, senha, SSL).
-
-    Exemplo de configuração no `docker-compose.yml`:
-    ```yaml
-    # ... (trecho do arquivo docker-compose.yml) ...
-    services:
-      traefik:
-        command:
-          # ...
-          - "--certificatesresolvers.myresolver.acme.email=seu.email@exemplo.com" # <-- SEU E-MAIL
-          # ...
-      odoo:
-        image: erickwornex/odoobrasileiro:latest
-        environment:
-          - SMTP_SERVER=smtp.seuprovedor.com
-          - SMTP_PORT=587
-          - SMTP_USER=seu_usuario_smtp
-          - SMTP_PASSWORD=sua_senha_smtp
-          - SMTP_SSL=True
-        labels:
-          - "traefik.enable=true"
-          - "traefik.http.routers.odoo.rule=Host(`odoo.seusite.com`)" # <-- SEU DOMÍNIO
-          - "traefik.http.routers.odoo.entrypoints=web"
-          - "traefik.http.routers.odoo-secure.rule=Host(`odoo.seusite.com`)" # <-- SEU DOMÍNIO
-          - "traefik.http.routers.odoo-secure.entrypoints=websecure"
-          - "traefik.http.routers.odoo-secure.tls=true"
-          - "traefik.http.routers.odoo-secure.tls.certresolver=myresolver"
-          - "traefik.http.services.odoo.loadbalancer.server.port=8069"
-          # ...
-    ```
-
-3.  **Inicie os serviços:**
+2.  **Inicie os serviços:**
     No terminal do seu servidor, no diretório `odoo-brasil`, execute:
     ```bash
     docker-compose up -d
     ```
-    O Docker irá baixar a imagem `erickwornex/odoobrasileiro:latest` e configurar o Traefik.
+    O Docker irá baixar a imagem `erickwornex/odoobrasileiro:latest` e iniciar o Odoo.
 
-4.  **Acesse o Odoo:**
-    Após alguns minutos (o Traefik precisa obter o certificado SSL), acesse seu Odoo pelo domínio configurado:
-    `https://odoo.SEU_DOMINIO_AQUI.com`
+3.  **Acesse o Odoo:**
+    Após alguns minutos, acesse seu Odoo pelo IP do seu servidor na porta 8069:
+    `http://IP_DO_SEU_SERVIDOR:8069`
 
-5.  **Configure o banco de dados:**
+4.  **Configure o banco de dados:**
     -   Crie um novo banco de dados.
     -   Master password: `mastersenha` (pode ser alterada nas variáveis de ambiente do Odoo no `docker-compose.yml` para produção).
-
-### Implantação com Portainer ou Easypanel
-Para Portainer ou Easypanel, o processo é similar:
-1.  No painel da ferramenta, crie uma nova "Stack" (Portainer) ou "Application" (Easypanel).
-2.  Cole todo o conteúdo do `docker-compose.yml` (já com seus dados preenchidos) no editor web da ferramenta.
-3.  Implante a stack/aplicação.
 
 ## ⚙️ Construindo a Imagem do Zero (para Desenvolvimento/Customização)
 
@@ -126,13 +81,13 @@ Se você precisa modificar o código-fonte do Odoo ou dos módulos, ou apenas qu
     Este comando construirá a imagem `erickwornex/odoobrasileiro:latest` a partir do `Dockerfile` customizado.
 
 3.  **Inicie os serviços (usando a imagem local):**
-    Use o `docker-compose.yml` (já configurado para produção) ou crie um `docker-compose.dev.yml` simples para desenvolvimento, apontando para a imagem `erickwornex/odoobrasileiro:latest`.
+    Use o `docker-compose.yml`.
     ```bash
     docker-compose up -d
     ```
 
 4.  **Acesse o Odoo:**
-    `http://localhost:8069` (se não estiver usando Traefik localmente)
+    `http://localhost:8069`
 
 ## 📁 Estrutura do Projeto
 
@@ -143,7 +98,7 @@ odoo-brasil/
 │   └── odoo.conf           # Configuração principal do Odoo
 ├── scripts/
 │   └── entrypoint.sh       # Script de inicialização do contêiner Odoo
-├── docker-compose.yml      # Orquestração dos serviços (Odoo, DB, Traefik)
+├── docker-compose.yml      # Orquestração dos serviços (Odoo, DB)
 ├── requirements.txt        # Dependências Python adicionais
 └── README.md               # Este arquivo
 ```
@@ -151,10 +106,8 @@ odoo-brasil/
 ## 🔧 Configuração
 
 ### Portas
--   **Odoo HTTP**: 8069 (interno ao contêiner)
--   **Odoo Longpolling**: 8072 (interno ao contêiner)
--   **Traefik HTTP**: 80 (externo)
--   **Traefik HTTPS**: 443 (externo)
+-   **Odoo HTTP**: 8069 (externo)
+-   **Odoo Longpolling**: 8072 (externo)
 -   **PostgreSQL**: 5432 (interno)
 
 ### Variáveis de Ambiente (no `docker-compose.yml`)
@@ -164,7 +117,6 @@ odoo-brasil/
     -   `POSTGRES_PASSWORD`: `odoo_password` (altere para produção!)
 -   **Odoo:**
     -   `admin_passwd`: `mastersenha` (senha mestra do Odoo, altere para produção!)
-    -   `SMTP_SERVER`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_SSL`: Configurações do seu servidor de e-mail.
 
 ## 🎯 Funcionalidades
 
@@ -214,9 +166,6 @@ odoo-brasil/
 # Verificar logs do Odoo
 docker-compose logs odoo
 
-# Verificar logs do Traefik (se estiver usando)
-docker-compose logs traefik
-
 # Reiniciar serviços
 docker-compose restart
 ```
@@ -241,11 +190,6 @@ docker-compose logs -f odoo
 ### Ver logs do PostgreSQL
 ```bash
 docker-compose logs -f db
-```
-
-### Ver logs do Traefik (se estiver usando)
-```bash
-docker-compose logs -f traefik
 ```
 
 ## 💾 Backup
