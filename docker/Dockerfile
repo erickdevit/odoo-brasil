@@ -1,14 +1,17 @@
-# Use ARG para definir versões, facilitando a manutenção e atualização
+# Use ARG to define versions, facilitating maintenance and updating
 ARG ODOO_VERSION=16.0
 ARG NODE_VERSION=16
 
-# --- Estágio de Construção (Builder) ---
-# Este estágio instala todas as dependências de build e prepara os artefatos.
+# --- Build Stage (Builder) ---
 FROM odoo:${ODOO_VERSION} as builder
+
+# Re-declare ARGs to make them available in the build stage
+ARG ODOO_VERSION
+ARG NODE_VERSION
 
 USER root
 
-# Instala dependências de sistema para compilação e Node.js
+# Install system dependencies for compilation and Node.js
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-dev \
     build-essential \
@@ -28,7 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get purge -y --auto-remove curl gnupg build-essential python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Instala dependências Python
+# Install Python dependencies
 COPY requirements.txt /tmp/requirements.txt
 RUN python3 -m pip install --upgrade pip setuptools wheel && \
     python3 -m pip install --no-cache-dir -r /tmp/requirements.txt && \
@@ -37,9 +40,9 @@ RUN python3 -m pip install --upgrade pip setuptools wheel && \
       erpbrasil.assinatura \
       erpbrasil.transmissao \
       erpbrasil.edoc \
-    && find /usr/local/lib/python*/site-packages/ -type d -name '__pycache__' -exec rm -r {} +
+    && find /usr/local/lib/python*/dist-packages/ -type d -name '__pycache__' -exec rm -r {} + || true
 
-# Clona repositórios OCA, instala seus requisitos e aplica o patch
+# Clone OCA repositories, install their requirements, and apply patch
 ARG ODOO_VERSION
 RUN git clone --depth=1 --branch=${ODOO_VERSION} https://github.com/OCA/l10n-brazil.git /opt/odoo/l10n-brazil && \
     git clone --depth=1 --branch=${ODOO_VERSION} https://github.com/OCA/product-attribute.git /opt/odoo/product-attribute && \
@@ -49,35 +52,32 @@ RUN git clone --depth=1 --branch=${ODOO_VERSION} https://github.com/OCA/l10n-bra
     sed -i 's/list | tuple/(list, tuple)/g' /opt/odoo/l10n-brazil/l10n_br_base/models/party_mixin.py
 
 
-# --- Estágio Final (Runtime) ---
-# Esta é a imagem final, que será muito mais leve.
+# --- Final Stage (Runtime) ---
 FROM odoo:${ODOO_VERSION}
 
 USER root
 
-# Instala apenas as dependências de sistema necessárias para a execução
+# Install only necessary runtime system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libxml2-dev libxslt1-dev libsasl2-dev libldap2-dev libjpeg-dev \
     dos2unix zlib1g-dev postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Copia os artefatos do estágio de construção (builder)
-COPY --from=builder /usr/local/lib/python* /usr/local/lib/python3.11
-COPY --from=builder /usr/local/bin/lessc /usr/local/bin/lessc
-COPY --from=builder /usr/local/bin/rtlcss /usr/local/bin/rtlcss
+# Copy artifacts from the builder stage
+COPY --from=builder /usr/local/lib/python3.9/dist-packages /usr/local/lib/python3.9/dist-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /usr/local/lib/node_modules/ /usr/local/lib/node_modules/
 COPY --from=builder /opt/odoo/ /opt/odoo/
 
-# Copia configuração, entrypoint e ajusta permissões
-COPY docker/odoo.conf /etc/odoo/odoo.conf
+# Copy configuration, entrypoint and adjust permissions
+COPY docker/odoo.conf.gemini /etc/odoo/odoo.conf
 COPY scripts/entrypoint.sh /entrypoint.sh
 RUN dos2unix /entrypoint.sh && chmod +x /entrypoint.sh && \
-    mkdir -p /mnt/extra-addons && \
-    chown -R odoo:odoo /opt/odoo /etc/odoo/odoo.conf /mnt/extra-addons
+    chown -R odoo:odoo /opt/odoo /etc/odoo/odoo.conf
 
 USER odoo
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["odoo"]
+CMD []
 
 EXPOSE 8069 8072

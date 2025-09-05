@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  db_test:
+    image: postgres:13
+    container_name: odoo-db-test
+    restart: always
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=odoo_password
+    volumes:
+      - db_data_test:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  odoo_test:
+    image: odoo-brasil-custom:latest
+    container_name: odoo-web-test
+    ports:
+      - "8070:8069"
+      - "8073:8072"
+    volumes:
+      - odoo-data-test:/var/lib/odoo
+    environment:
+      - DB_HOST=db_test
+      - DB_PORT=5432
+      - DB_USER=odoo
+      - DB_PASSWORD=odoo_password
+    depends_on:
+      db_test:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8069/web/database/selector >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db_data_test:
+  odoo-data-test:
